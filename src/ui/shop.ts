@@ -14,19 +14,33 @@ interface Card {
 export class Shop {
   private readonly cards: Card[] = [];
 
-  constructor(root: HTMLElement, onPick: (id: TowerId) => void) {
+  /**
+   * `onPress` fires on pointer down (mouse or finger) so a card can be dragged onto the map;
+   * `onPick` handles keyboard activation.
+   */
+  constructor(root: HTMLElement, onPress: (id: TowerId, ev: PointerEvent) => void, onPick: (id: TowerId) => void) {
     root.append(h('div', { class: 'section-title', text: t('shop.title') }));
     const grid = h('div', { class: 'shop-grid' });
     TOWER_ORDER.forEach((id, i) => {
       const price = h('span', { class: 'card-price' });
       const el = h(
         'button',
-        { class: 'px card', title: `${towerName(id)} (${i + 1})\n${towerDesc(id)}`, onclick: () => onPick(id) },
+        {
+          class: 'px card',
+          title: `${towerName(id)} (${i + 1})\n${towerDesc(id)}`,
+          // detail === 0 means the click came from the keyboard, not a pointer.
+          onclick: (ev) => ev.detail === 0 && onPick(id),
+        },
         h('span', { class: 'card-key', text: String(i + 1) }),
         jamnikIcon(id, 2),
         h('span', { class: 'card-name', text: towerShort(id) }),
         price,
       );
+      el.addEventListener('pointerdown', (ev) => {
+        if (ev.button !== 0) return;
+        ev.preventDefault();
+        onPress(id, ev);
+      });
       grid.append(el);
       this.cards.push({ id, el, price });
     });

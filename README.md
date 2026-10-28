@@ -44,6 +44,8 @@ The vacuums want to suck up the dog bed. Seven dachshunds stand in their way, ea
 
 Click the Baker's cookies to collect them right away.
 
+**On a phone** the game switches to a portrait layout, with the map on top and the shop and upgrades below. Drag a dachshund from the shop onto the map and let go to place it. The preview floats above your finger so you can see where it lands, and a red range means it can't go there. Tap a dachshund to upgrade or sell it, and tap cookies to collect them.
+
 ## Run locally
 
 ```bash

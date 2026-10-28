@@ -1,6 +1,6 @@
 import { Sfx, type SoundName } from './audio/sfx';
 import { dist } from './core/math';
-import { FIELD_H, FIELD_W, SIM_DT, type Difficulty, type MapId, type TowerId, type Vec2 } from './core/types';
+import { SIM_DT, type Difficulty, type MapId, type TowerId, type Vec2 } from './core/types';
 import { TOWER_ORDER } from './data/towers';
 import { Effects } from './render/effects';
 import { Renderer } from './render/renderer';
@@ -13,6 +13,7 @@ import { h } from './ui/dom';
 import { Controls, Hud } from './ui/hud';
 import { Screens } from './ui/menu';
 import { Shop } from './ui/shop';
+import { TOUCH_LIFT_PX, chooseLayout, insideField, toFieldPoint, wideScale } from './ui/pointer';
 import { TowerPanel } from './ui/towerPanel';
 
 const SPEEDS = [1, 2, 3];
@@ -42,6 +43,10 @@ export class App {
   private placing: TowerId | null = null;
   private selected: Tower | null = null;
   private mouse: Vec2 | null = null;
+  /** Pointer currently aiming a placement on the map. */
+  private aiming: number | null = null;
+  /** A shop card being dragged towards the map. */
+  private shopDrag: { pointerId: number; wasPlacing: boolean; reachedMap: boolean } | null = null;
   private speed = 1;
   private paused = false;
   private autoStart = getSetting('auto', false);
@@ -93,7 +98,11 @@ export class App {
     for (const id of ['hud', 'shop', 'panel', 'controls']) document.getElementById(id)!.replaceChildren();
     document.querySelector('.debug-bar')?.remove();
     this.hud = new Hud(document.getElementById('hud')!);
-    this.shop = new Shop(document.getElementById('shop')!, (id) => this.pick(id));
+    this.shop = new Shop(
+      document.getElementById('shop')!,
+      (id, ev) => this.pressCard(id, ev),
+      (id) => this.pick(id),
+    );
     this.panel = new TowerPanel(document.getElementById('panel')!, {
       upgrade: (t, path) => {
         if (this.world?.upgradeTower(t, path)) this.sfx.play('upgrade');
@@ -108,6 +117,10 @@ export class App {
         this.sfx.play('click');
       },
       close: () => (this.selected = null),
+      cancelPlacing: () => {
+        this.placing = null;
+        this.mouse = null;
+      },
     });
     this.controls = new Controls(document.getElementById('controls')!, {
       startWave: () => this.startWave(),
@@ -122,10 +135,12 @@ export class App {
     if (this.debug) this.buildDebugBar();
   }
 
+  /** Portrait phones get a stacked layout at natural size; otherwise the desktop layout is scaled to fit. */
   private fitToWindow(): void {
     const app = document.getElementById('app')!;
-    const scale = Math.min(window.innerWidth / app.offsetWidth, window.innerHeight / app.offsetHeight, 2);
-    app.style.transform = `scale(${Math.max(0.3, scale * 0.98)})`;
+    const portrait = chooseLayout(window.innerWidth, window.innerHeight) === 'portrait';
+    document.body.classList.toggle('portrait', portrait);
+    app.style.transform = portrait ? '' : `scale(${wideScale(window.innerWidth, window.innerHeight)})`;
   }
 
   private newGame(map: MapId, diff: Difficulty): void {
@@ -182,46 +197,100 @@ export class App {
 
   // ---------------------------------------------------------------- input
 
-  private toField(ev: MouseEvent): Vec2 {
-    const r = this.canvas.getBoundingClientRect();
-    return { x: ((ev.clientX - r.left) / r.width) * FIELD_W, y: ((ev.clientY - r.top) / r.height) * FIELD_H };
+  /**
+   * Field position of a pointer. Fingers get the ghost lifted above them so it stays visible.
+   */
+  private toField(ev: PointerEvent, lift = false): Vec2 {
+    return toFieldPoint(ev.clientX, ev.clientY, this.canvas.getBoundingClientRect(), lift && ev.pointerType !== 'mouse' ? TOUCH_LIFT_PX : 0);
   }
 
+  /**
+   * Pointer events cover mouse, touch and pen. Placing works the same way for all of them:
+   * press on the map (or drag a card from the shop onto it), move to aim, release to place.
+   */
   private bindInput(): void {
-    this.canvas.addEventListener('mousemove', (ev) => (this.mouse = this.toField(ev)));
-    this.canvas.addEventListener('mouseleave', () => (this.mouse = null));
-    this.canvas.addEventListener('contextmenu', (ev) => {
+    const c = this.canvas;
+    c.addEventListener('contextmenu', (ev) => {
       ev.preventDefault();
       this.placing = null;
       this.selected = null;
     });
-    this.canvas.addEventListener('mousedown', (ev) => {
-      if (ev.button !== 0) return;
+    c.addEventListener('pointerdown', (ev) => {
+      if (ev.button !== 0 || !this.world || this.paused) return;
       this.sfx.unlock();
-      this.click(this.toField(ev), ev.shiftKey);
+      if (this.placing) {
+        ev.preventDefault();
+        this.aiming = ev.pointerId;
+        c.setPointerCapture(ev.pointerId);
+        this.mouse = this.toField(ev, true);
+      } else {
+        this.tap(this.toField(ev), ev.pointerType !== 'mouse');
+      }
     });
+    c.addEventListener('pointermove', (ev) => {
+      if (this.aiming === ev.pointerId) this.mouse = this.toField(ev, true);
+      else if (ev.pointerType === 'mouse' && !this.shopDrag) this.mouse = this.toField(ev);
+    });
+    c.addEventListener('pointerup', (ev) => {
+      if (this.aiming !== ev.pointerId) return;
+      this.aiming = null;
+      if (this.mouse) this.tryPlace(this.mouse, ev.shiftKey);
+    });
+    c.addEventListener('pointercancel', () => (this.aiming = null));
+    c.addEventListener('pointerleave', (ev) => {
+      if (ev.pointerType === 'mouse' && this.aiming === null && !this.shopDrag) this.mouse = null;
+    });
+
+    // Dragging a card from the shop onto the map.
+    window.addEventListener('pointermove', (ev) => {
+      if (this.shopDrag?.pointerId !== ev.pointerId) return;
+      const p = this.toField(ev, true);
+      this.mouse = insideField(p) ? p : null;
+      if (this.mouse) this.shopDrag.reachedMap = true;
+    });
+    window.addEventListener('pointerup', (ev) => {
+      const drag = this.shopDrag;
+      if (drag?.pointerId !== ev.pointerId) return;
+      this.shopDrag = null;
+      if (this.mouse && drag.reachedMap) this.tryPlace(this.mouse, ev.shiftKey);
+      else if (!drag.reachedMap && drag.wasPlacing) this.placing = null; // tapping the active card again cancels
+    });
+    window.addEventListener('pointercancel', () => (this.shopDrag = null));
     window.addEventListener('keydown', (ev) => this.key(ev));
   }
 
-  private click(pos: Vec2, keepPlacing: boolean): void {
+  private pressCard(id: TowerId, ev: PointerEvent): void {
+    if (!this.world || this.paused) return;
+    this.sfx.unlock();
+    const wasPlacing = this.placing === id;
+    this.selected = null;
+    this.placing = id;
+    this.shopDrag = { pointerId: ev.pointerId, wasPlacing, reachedMap: false };
+    if (!wasPlacing) this.sfx.play('click');
+  }
+
+  private tryPlace(pos: Vec2, keepPlacing: boolean): void {
     const world = this.world;
-    if (!world || this.paused) return;
-    if (this.placing) {
-      const t = world.placeTower(this.placing, pos);
-      if (t) {
-        this.sfx.play('place');
-        if (!keepPlacing || world.money < world.towerPrice(this.placing)) this.placing = null;
-      } else {
-        this.sfx.play('error');
-      }
-      return;
+    if (!world || !this.placing) return;
+    if (world.placeTower(this.placing, pos)) {
+      this.sfx.play('place');
+      if (!keepPlacing || world.money < world.towerPrice(this.placing)) this.placing = null;
+    } else {
+      this.sfx.play('error');
     }
-    const cookie = world.cookies.find((c) => dist(c.pos, pos) <= COOKIE_RADIUS + 4);
+  }
+
+  /** Tap or click on the map while not placing: collect cookies, select dachshunds. */
+  private tap(pos: Vec2, finger: boolean): void {
+    const world = this.world;
+    if (!world) return;
+    const slack = finger ? 16 : 6;
+    const cookie = world.cookies.find((c) => dist(c.pos, pos) <= COOKIE_RADIUS + slack);
     if (cookie) {
       world.collectCookie(cookie.id);
       return;
     }
-    const tower = world.towers.find((t) => dist(t.pos, pos) <= t.radius + 8) ?? null;
+    const tower = world.towers.find((t) => dist(t.pos, pos) <= t.radius + slack + 2) ?? null;
     this.selected = tower;
     if (tower) this.sfx.play('click');
   }

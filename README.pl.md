@@ -46,6 +46,8 @@ Gra uruchamia się po angielsku, jeśli przeglądarka nie jest ustawiona na pols
 
 Ciasteczka Piekarza można klikać, żeby zebrać je od razu.
 
+**Na telefonie** gra przechodzi w układ pionowy: mapa jest u góry, a sklep i ulepszenia pod nią. Przeciągnij jamnika ze sklepu na mapę i puść, żeby go postawić. Podgląd unosi się nad palcem, żeby było widać, gdzie wyląduje, a czerwony zasięg oznacza, że tu nie można. Stuknij jamnika, żeby go ulepszyć albo sprzedać, a ciasteczka zbierasz stuknięciem.
+
 ## Uruchomienie lokalne
 
 ```bash

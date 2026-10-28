@@ -59,10 +59,14 @@ export class Screens {
               },
             },
             thumb,
-            h('span', { class: 'map-name', text: mapName(id) }),
-            h('span', { class: 'map-diff', text: mapDifficulty(id) }),
-            h('span', { class: 'map-desc', text: mapDesc(id) }),
-            h('span', { class: 'map-best', text: best > 0 ? t('menu.best', { n: best }) : t('menu.bestNone') }),
+            h(
+              'span',
+              { class: 'map-info' },
+              h('span', { class: 'map-name', text: mapName(id) }),
+              h('span', { class: 'map-diff', text: mapDifficulty(id) }),
+              h('span', { class: 'map-desc', text: mapDesc(id) }),
+              h('span', { class: 'map-best', text: best > 0 ? t('menu.best', { n: best }) : t('menu.bestNone') }),
+            ),
           ),
         );
       }

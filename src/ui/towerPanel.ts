@@ -5,12 +5,14 @@ import { canUpgrade, towerSellValue, towerTier, type Tower } from '../sim/tower'
 import type { GameWorld } from '../sim/world';
 import { h, money, setText, toggleClass } from './dom';
 import { jamnikIcon } from './icons';
+import { prefersTouch } from './pointer';
 
 export interface PanelActions {
   upgrade(t: Tower, path: 0 | 1): void;
   sell(t: Tower): void;
   cycleTarget(t: Tower): void;
   close(): void;
+  cancelPlacing(): void;
 }
 
 interface UpgradeButton {
@@ -55,10 +57,11 @@ export class TowerPanel {
   }
 
   private buildHint(): void {
+    const touch = prefersTouch();
     this.root.append(
       h('div', { class: 'section-title', text: t('panel.howTo') }),
-      h('p', { class: 'hint', text: t('panel.hint') }),
-      h('p', { class: 'hint small', text: t('panel.hintSmall') }),
+      h('p', { class: 'hint', text: t(touch ? 'panel.hintTouch' : 'panel.hint') }),
+      h('p', { class: 'hint small', text: t(touch ? 'panel.hintSmallTouch' : 'panel.hintSmall') }),
     );
   }
 
@@ -71,7 +74,8 @@ export class TowerPanel {
         h('div', {}, h('div', { class: 'panel-name', text: towerName(id) }), h('div', { class: 'panel-sub', text: money(world.towerPrice(id)) })),
       ),
       h('p', { class: 'hint', text: towerDesc(id) }),
-      h('p', { class: 'hint small', text: t('panel.placeHint') }),
+      h('p', { class: 'hint small', text: t(prefersTouch() ? 'panel.placeHintTouch' : 'panel.placeHint') }),
+      h('button', { class: 'px btn-wide', text: t('panel.cancel'), onclick: () => this.actions.cancelPlacing() }),
     );
   }
 
