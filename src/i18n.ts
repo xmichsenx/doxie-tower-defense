@@ -51,6 +51,11 @@ const PL = {
     'Wybierz jamnika ze sklepu (klawisze 1–7) i kliknij na mapie, żeby go postawić. Kliknij postawionego jamnika, żeby go ulepszyć. Spacja startuje falę.',
   'panel.hintSmall': 'Shift + klik stawia kilka jamników pod rząd. Prawy przycisk lub Esc anuluje.',
   'panel.placeHint': 'Kliknij na mapie, żeby postawić. Esc anuluje.',
+  'panel.hintTouch':
+    'Przeciągnij jamnika ze sklepu na mapę i puść, żeby go postawić. Stuknij postawionego jamnika, żeby go ulepszyć. „Start fali” wypuszcza odkurzacze.',
+  'panel.hintSmallTouch': 'Ciasteczka Piekarza zbierasz stuknięciem.',
+  'panel.placeHintTouch': 'Przesuń palcem po mapie i puść, żeby postawić. Czerwony zasięg = tu nie można.',
+  'panel.cancel': 'Anuluj',
   'panel.close': 'Zamknij (Esc)',
   'panel.pops': 'Zniszczone: {n}',
   'panel.target': 'Cel: {m}',
@@ -123,6 +128,11 @@ const EN: Record<UiKey, string> = {
     'Pick a dachshund from the shop (keys 1–7) and click the map to place it. Click a placed dachshund to upgrade it. Space starts a wave.',
   'panel.hintSmall': 'Shift + click places several in a row. Right click or Esc cancels.',
   'panel.placeHint': 'Click the map to place it. Esc cancels.',
+  'panel.hintTouch':
+    'Drag a dachshund from the shop onto the map and let go to place it. Tap a placed dachshund to upgrade it. “Start wave” releases the vacuums.',
+  'panel.hintSmallTouch': "Tap the Baker's cookies to collect them.",
+  'panel.placeHintTouch': 'Slide your finger over the map and let go to place it. A red range means it cannot go there.',
+  'panel.cancel': 'Cancel',
   'panel.close': 'Close (Esc)',
   'panel.pops': 'Destroyed: {n}',
   'panel.target': 'Target: {m}',
