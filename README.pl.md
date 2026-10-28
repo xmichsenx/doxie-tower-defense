@@ -76,3 +76,7 @@ TypeScript (strict), Vite i Canvas 2D. Bez silnika gier i bez frameworka UI.
 - `tests/`: testy jednostkowe i symulacje bez przeglądarki
 
 Każdy push na `main` jest testowany i wdrażany na GitHub Pages przez [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml).
+
+## Licencja
+
+[MIT](LICENSE)

@@ -74,3 +74,7 @@ TypeScript (strict), Vite and the Canvas 2D API. There is no game engine and no 
 - `tests/`: unit tests and headless simulation tests
 
 Every push to `main` is tested and deployed to GitHub Pages by [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml).
+
+## License
+
+[MIT](LICENSE)
